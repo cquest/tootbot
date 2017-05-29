@@ -8,7 +8,7 @@ import re
 import sqlite3
 from datetime import datetime, date, time, timedelta
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")
     sys.exit(1)
 
@@ -17,41 +17,21 @@ sql = sqlite3.connect('tootbot.db')
 db = sql.cursor()
 db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text, twitter text, mastodon text, instance text)''')
 
-if len(sys.argv)>3:
+if len(sys.argv)>4:
     instance = sys.argv[4]
 else:
     instance = 'amicale.net'
+
+if len(sys.argv)>5:
+    days = int(sys.argv[5])
+else:
+    days = 1
 
 twitter = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
 
-# Create application if it does not exist
-if not os.path.isfile(instance+'.secret'):
-    if Mastodon.create_app(
-        'tootbot',
-        api_base_url='https://'+instance,
-        to_file = instance+'.secret'
-    ):
-        print('tootbot app created on instance '+instance)
-    else:
-        print('failed to create app on instance '+instance)
-        sys.exit(1)
-
-try:
-    mastodon_api = Mastodon(
-      client_id=instance+'.secret',
-      api_base_url='https://'+instance
-    )
-    mastodon_api.log_in(
-        username=mastodon,
-        password=passwd,
-        scopes=['read', 'write'],
-        to_file=mastodon+".secret"
-    )
-except:
-    print("ERROR: First Login Failed!")
-    sys.exit(1)
+mastodon_api = None
 
 d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+twitter)
 
@@ -61,7 +41,36 @@ for t in reversed(d.entries):
     last = db.fetchone()
 
     # process only unprocessed tweets less than 1 day old
-    if last is None and (datetime.now()-datetime(t.published_parsed.tm_year, t.published_parsed.tm_mon, t.published_parsed.tm_mday, t.published_parsed.tm_hour, t.published_parsed.tm_min, t.published_parsed.tm_sec) < timedelta(days=1)):
+    if last is None and (datetime.now()-datetime(t.published_parsed.tm_year, t.published_parsed.tm_mon, t.published_parsed.tm_mday, t.published_parsed.tm_hour, t.published_parsed.tm_min, t.published_parsed.tm_sec) < timedelta(days=days)):
+        if mastodon_api is None:
+            # Create application if it does not exist
+            if not os.path.isfile(instance+'.secret'):
+                if Mastodon.create_app(
+                    'tootbot',
+                    api_base_url='https://'+instance,
+                    to_file = instance+'.secret'
+                ):
+                    print('tootbot app created on instance '+instance)
+                else:
+                    print('failed to create app on instance '+instance)
+                    sys.exit(1)
+
+            try:
+                mastodon_api = Mastodon(
+                  client_id=instance+'.secret',
+                  api_base_url='https://'+instance
+                )
+                mastodon_api.log_in(
+                    username=mastodon,
+                    password=passwd,
+                    scopes=['read', 'write'],
+                    to_file=mastodon+".secret"
+                )
+            except:
+                print("ERROR: First Login Failed!")
+                sys.exit(1)
+
+
         #h = BeautifulSoup(t.summary_detail.value, "html.parser")
         c = t.title
         toot_media = []
