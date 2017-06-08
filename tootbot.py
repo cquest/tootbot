@@ -70,9 +70,10 @@ for t in reversed(d.entries):
                 print("ERROR: First Login Failed!")
                 sys.exit(1)
 
-
         #h = BeautifulSoup(t.summary_detail.value, "html.parser")
         c = t.title
+        if t.author != '(%s)' % twitter:
+            c = ("RT %s\n" % t.author[1:-1]) + c
         toot_media = []
         # get the pictures...
         for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
