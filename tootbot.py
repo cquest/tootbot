@@ -92,10 +92,10 @@ for t in reversed(d.entries):
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
         if m != None:
             l = m.group(0)
-            c = c.replace(l,'')
+            c = c.replace(l,' ')
 
         # remove ellipsis
-        c = c.replace('\xa0…','')
+        c = c.replace('\xa0…',' ')
 
         if toot_media is not None:
             toot = mastodon_api.status_post(c, in_reply_to_id=None, media_ids=toot_media, sensitive=False, visibility='public', spoiler_text=None)
