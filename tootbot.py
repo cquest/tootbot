@@ -1,6 +1,6 @@
 import os.path
 import sys
-import feedparser
+import twitter
 from mastodon import Mastodon
 import json
 import requests
@@ -27,21 +27,30 @@ if len(sys.argv)>5:
 else:
     days = 1
 
-twitter = sys.argv[1]
+twittername = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
 
 mastodon_api = None
 
-d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+twitter)
+# TO BE COMPLETED: TWITTER APP CREDENTIALS
+CONSUMER_KEY = None
+CONSUMER_SECRET = None
+ACCESS_TOKEN = None
+ACCESS_TOKEN_SECRET = None
 
-for t in reversed(d.entries):
+api = twitter.Api(consumer_key = CONSUMER_KEY, consumer_secret = CONSUMER_SECRET, access_token_key = ACCESS_TOKEN, access_token_secret = ACCESS_TOKEN_SECRET, tweet_mode = 'extended')
+# Fetch max. 50 statuses
+feed = api.GetUserTimeline(screen_name = twittername, exclude_replies = True,
+        count = 50)
+
+for t in reversed(feed):
     # check if this tweet has been processed
-    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?',(t.id, twitter, mastodon, instance))
+    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?',(t.id, twittername, mastodon, instance))
     last = db.fetchone()
 
     # process only unprocessed tweets less than 1 day old
-    if last is None and (datetime.now()-datetime(t.published_parsed.tm_year, t.published_parsed.tm_mon, t.published_parsed.tm_mday, t.published_parsed.tm_hour, t.published_parsed.tm_min, t.published_parsed.tm_sec) < timedelta(days=days)):
+    if last is None and (datetime.now()-datetime.strptime(t.created_at, "%a %b %d %H:%M:%S +0000 %Y") < timedelta(days=days)):
         if mastodon_api is None:
             # Create application if it does not exist
             if not os.path.isfile(instance+'.secret'):
@@ -71,15 +80,18 @@ for t in reversed(d.entries):
                 sys.exit(1)
 
         #h = BeautifulSoup(t.summary_detail.value, "html.parser")
-        c = t.title
-        if t.author != '(%s)' % twitter:
-            c = ("RT %s\n" % t.author[1:-1]) + c
+        if t.retweeted_status is not None:
+            c = t.retweeted_status.full_text
+            c = ("RT @%s\xa0: " % t.retweeted_status.user.screen_name) + c
+        else:
+            c = t.full_text
         toot_media = []
         # get the pictures...
-        for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
-            media = requests.get(p.group(0))
-            media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
-            toot_media.append(media_posted['id'])
+        if t.media is not None:
+            for m in t.media:
+                media = requests.get(m.media_url)
+                media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
+                toot_media.append(media_posted['id'])
 
         # replace t.co link by original URL
         m = re.search(r"http[^ \xa0]*", c)
@@ -87,7 +99,10 @@ for t in reversed(d.entries):
             l = m.group(0)
             r = requests.get(l, allow_redirects=False)
             if r.status_code in {301,302}:
-                c = c.replace(l,r.headers.get('Location'))
+                url = r.headers.get('Location')
+                # Replace only if original URL is not too long
+                if len(url) < 100:
+                    c = c.replace(l,r.headers.get('Location'))
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
@@ -95,12 +110,9 @@ for t in reversed(d.entries):
             l = m.group(0)
             c = c.replace(l,' ')
 
-        # remove ellipsis
-        c = c.replace('\xa0…',' ')
-
         if toot_media is not None:
             toot = mastodon_api.status_post(c, in_reply_to_id=None, media_ids=toot_media, sensitive=False, visibility='public', spoiler_text=None)
             if "id" in toot:
                 db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
-                (t.id, toot["id"], twitter, mastodon, instance))
+                (t.id, toot["id"], twittername, mastodon, instance))
                 sql.commit()
