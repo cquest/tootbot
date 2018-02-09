@@ -1,6 +1,6 @@
 # TootBot
 
-A small python script to replicate tweets on a mastodon account.
+A small python 3.x script to replicate tweets on a mastodon account.
 
 The script only need mastodon login/pass to post toots.
 
