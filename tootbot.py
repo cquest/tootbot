@@ -94,15 +94,19 @@ for t in reversed(feed):
                 toot_media.append(media_posted['id'])
 
         # replace t.co link by original URL
-        m = re.search(r"http[^ \xa0]*", c)
-        if m != None:
+        matches = re.finditer(r"https?://[^ \n\xa0]*", c)
+        length = len(c)
+        for m in matches:
             l = m.group(0)
             r = requests.get(l, allow_redirects=False)
             if r.status_code in {301,302}:
                 url = r.headers.get('Location')
-                # Replace only if original URL is not too long
-                if len(url) < 100:
+                # Replace by original URL only if it does not result in the toot
+                # exceeding 500 characters.
+                new_length = length - len(l) + len(url)
+                if new_length < 500:
                     c = c.replace(l,r.headers.get('Location'))
+                    length = new_length
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
