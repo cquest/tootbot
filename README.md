@@ -19,3 +19,14 @@ This script is in use for a few accounts:
 - sotmfr -> https://fr.osm.social/@sotmfr
 
 The script is simply called by a cron job and can run on any server (does not have to be on the mastodon instance server).
+
+## Setup
+
+```
+# clone this repo
+git clone https://github.com/cquest/tootbot.git
+cd tootbot
+
+# install required python modules
+pip3 install -r requirements.txt
+```
