@@ -30,3 +30,13 @@ cd tootbot
 # install required python modules
 pip3 install -r requirements.txt
 ```
+
+## Useage
+
+`python3 tootbot.py <twitter_pseudo> <mastodon_account> <mastodon_password> <mastodon_domain>`
+
+Example:
+
+`python3 tootbot.py geonym_fr geonym@mastodon.mydomain.org **password** mastodon.mydomain.org`
+
+It's up to you to add this in your crontab :)
