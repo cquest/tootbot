@@ -12,7 +12,7 @@ A sqlite database is used to keep track of tweets than have been tooted.
 
 
 This script is in use for a few accounts:
-- cq94 -> https://amicale.net/@cquest
+- cq94 -> https://amicale.net/@cquest (original author mastodon account)
 - Etalab -> https://mastodon.etalab.gouv.fr/@etalab
 - datagouvfr -> https://mastodon.etalab.gouv.fr/@datagouvfr
 - osm_fr -> https://fr.osm.social/@osm_fr
