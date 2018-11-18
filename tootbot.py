@@ -7,6 +7,8 @@ import requests
 import re
 import sqlite3
 from datetime import datetime, date, time, timedelta
+import urllib.request
+from lxml import html
 
 if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")
@@ -73,7 +75,11 @@ for t in reversed(d.entries):
         #h = BeautifulSoup(t.summary_detail.value, "html.parser")
         c = t.title
         if t.author != '(%s)' % twitter:
-            c = ("RT %s\n" % t.author[1:-1]) + c
+           url = "https://twitter.com/"+t.author[1:-1]            
+           page = html.fromstring(urllib.request.urlopen(url).read())            
+           for name in page.iter('title'):	            
+              screen_name=name.text_content().split(" (")[0]            
+           c = ("RT %s\n" % screen_name) + c
         toot_media = []
         # get the pictures...
         for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
