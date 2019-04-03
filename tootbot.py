@@ -9,7 +9,7 @@ from mastodon import Mastodon
 import requests
 
 if len(sys.argv) < 4:
-    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")  # noqa
+    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags]]")  # noqa
     sys.exit(1)
 
 # sqlite db to store processed tweets (and corresponding toots ids)
