@@ -8,6 +8,8 @@ It gets the tweets from RSS available at http://twitrss.me, then does some clean
 - twitter tracking links (t.co) are dereferenced
 - twitter hosted pictures are retrieved and uploaded to mastodon
 
+It can also toot RSS/atom feeds (see cron-example.sh).
+
 A sqlite database is used to keep track of tweets than have been tooted.
 
 
@@ -40,3 +42,7 @@ Example:
 `python3 tootbot.py geonym_fr geonym@mastodon.mydomain.org **password** mastodon.mydomain.org`
 
 It's up to you to add this in your crontab :)
+
+With a plain RSS/atom feed:
+
+`python3 tootbot.py https://www.data.gouv.fr/fr/datasets/recent.atom cquest+opendata@amicale.net **password** amicale.net 2 "#dataset #opendata #datagouvfr"`
