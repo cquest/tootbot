@@ -40,9 +40,11 @@ for t in reversed(d.entries):
     # check if this tweet has been processed
     db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (t.id, source, mastodon, instance))  # noqa
     last = db.fetchone()
-
+    dt = t.published_parsed
+    age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
+                                  dt.tm_hour, dt.tm_min, dt.tm_sec)
     # process only unprocessed tweets less than 1 day old
-    if last is None and (datetime.now()-datetime(t.published_parsed.tm_year, t.published_parsed.tm_mon, t.published_parsed.tm_mday, t.published_parsed.tm_hour, t.published_parsed.tm_min, t.published_parsed.tm_sec) < timedelta(days=days)):
+    if last is None and age < timedelta(days=days):
         if mastodon_api is None:
             # Create application if it does not exist
             if not os.path.isfile(instance+'.secret'):
