@@ -1,12 +1,12 @@
 import os.path
 import sys
-import feedparser
-from mastodon import Mastodon
-import json
-import requests
 import re
 import sqlite3
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
+
+import feedparser
+from mastodon import Mastodon
+import requests
 
 if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")
