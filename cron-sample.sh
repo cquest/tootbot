@@ -7,5 +7,5 @@
 # 3- mastodon password
 # 4- instance domain (https:// is automatically added)
 
-python tootbot.py geonym_fr geonym@amicale.net **password** test.amicale.net
-python tootbot.py cq94 cquest@amicale.net **password** test.amicale.net
+python3 tootbot.py geonym_fr geonym@amicale.net **password** test.amicale.net
+python3 tootbot.py cq94 cquest@amicale.net **password** test.amicale.net
