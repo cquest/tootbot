@@ -28,13 +28,23 @@ if len(sys.argv) > 5:
 else:
     days = 1
 
-twitter = sys.argv[1]
+if len(sys.argv) > 6:
+    tags = sys.argv[6]
+else:
+    tags = None
+
+source = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
 
 mastodon_api = None
 
-d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+twitter)
+if source[:4] == 'http':
+    d = feedparser.parse(source)
+    twitter = None
+else:
+    d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+source)
+    twitter = source
 
 for t in reversed(d.entries):
     # check if this tweet has been processed
@@ -73,9 +83,8 @@ for t in reversed(d.entries):
                 print("ERROR: First Login Failed!")
                 sys.exit(1)
 
-        #h = BeautifulSoup(t.summary_detail.value, "html.parser")
         c = t.title
-        if t.author.lower() != ('(@%s)' % twitter).lower():
+        if twitter and t.author.lower() != ('(@%s)' % twitter).lower():
             c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
         toot_media = []
         # get the pictures...
@@ -84,9 +93,9 @@ for t in reversed(d.entries):
             media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
             toot_media.append(media_posted['id'])
 
-        # replace t.co link by original URL
+        # replace short links by original URL
         m = re.search(r"http[^ \xa0]*", c)
-        if m != None:
+        if m is not None:
             l = m.group(0)
             r = requests.get(l, allow_redirects=False)
             if r.status_code in {301, 302}:
@@ -94,12 +103,18 @@ for t in reversed(d.entries):
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
-        if m != None:
+        if m is not None:
             l = m.group(0)
             c = c.replace(l, ' ')
 
         # remove ellipsis
-        c = c.replace('\xa0…',' ')
+        c = c.replace('\xa0…', ' ')
+
+        if twitter is None:
+            c = c + '\nSource: '+ t.authors[0].name +'\n\n' + t.link
+
+        if tags:
+            c = c + '\n' + tags
 
         if toot_media is not None:
             toot = mastodon_api.status_post(c, in_reply_to_id=None,
@@ -109,5 +124,5 @@ for t in reversed(d.entries):
                                             spoiler_text=None)
             if "id" in toot:
                 db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
-                (t.id, toot["id"], twitter, mastodon, instance))
+                           (t.id, toot["id"], source, mastodon, instance))
                 sql.commit()
