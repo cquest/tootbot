@@ -9,20 +9,21 @@ from mastodon import Mastodon
 import requests
 
 if len(sys.argv) < 4:
-    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")
+    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance")  # noqa
     sys.exit(1)
 
 # sqlite db to store processed tweets (and corresponding toots ids)
 sql = sqlite3.connect('tootbot.db')
 db = sql.cursor()
-db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text, twitter text, mastodon text, instance text)''')
+db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text,
+           twitter text, mastodon text, instance text)''')
 
-if len(sys.argv)>4:
+if len(sys.argv) > 4:
     instance = sys.argv[4]
 else:
     instance = 'amicale.net'
 
-if len(sys.argv)>5:
+if len(sys.argv) > 5:
     days = int(sys.argv[5])
 else:
     days = 1
@@ -37,7 +38,7 @@ d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+twitter)
 
 for t in reversed(d.entries):
     # check if this tweet has been processed
-    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?',(t.id, twitter, mastodon, instance))
+    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (t.id, source, mastodon, instance))  # noqa
     last = db.fetchone()
 
     # process only unprocessed tweets less than 1 day old
@@ -48,7 +49,7 @@ for t in reversed(d.entries):
                 if Mastodon.create_app(
                     'tootbot',
                     api_base_url='https://'+instance,
-                    to_file = instance+'.secret'
+                    to_file=instance+'.secret'
                 ):
                     print('tootbot app created on instance '+instance)
                 else:
@@ -86,20 +87,24 @@ for t in reversed(d.entries):
         if m != None:
             l = m.group(0)
             r = requests.get(l, allow_redirects=False)
-            if r.status_code in {301,302}:
-                c = c.replace(l,r.headers.get('Location'))
+            if r.status_code in {301, 302}:
+                c = c.replace(l, r.headers.get('Location'))
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
         if m != None:
             l = m.group(0)
-            c = c.replace(l,' ')
+            c = c.replace(l, ' ')
 
         # remove ellipsis
         c = c.replace('\xa0…',' ')
 
         if toot_media is not None:
-            toot = mastodon_api.status_post(c, in_reply_to_id=None, media_ids=toot_media, sensitive=False, visibility='public', spoiler_text=None)
+            toot = mastodon_api.status_post(c, in_reply_to_id=None,
+                                            media_ids=toot_media,
+                                            sensitive=False,
+                                            visibility='public',
+                                            spoiler_text=None)
             if "id" in toot:
                 db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
                 (t.id, toot["id"], twitter, mastodon, instance))
