@@ -9,7 +9,7 @@ from mastodon import Mastodon
 import requests
 
 if len(sys.argv) < 4:
-    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags]]")  # noqa
+    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
     sys.exit(1)
 
 # sqlite db to store processed tweets (and corresponding toots ids)
@@ -33,6 +33,12 @@ if len(sys.argv) > 6:
 else:
     tags = None
 
+if len(sys.argv) > 7:
+    delay = int(sys.argv[7])
+else:
+    delay = 0
+
+
 source = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
@@ -53,8 +59,8 @@ for t in reversed(d.entries):
     dt = t.published_parsed
     age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
                                   dt.tm_hour, dt.tm_min, dt.tm_sec)
-    # process only unprocessed tweets less than 1 day old
-    if last is None and age < timedelta(days=days):
+    # process only unprocessed tweets less than 1 day old, after delay
+    if last is None and age < timedelta(days=days) and age > timedelta(days=delay):
         if mastodon_api is None:
             # Create application if it does not exist
             if not os.path.isfile(instance+'.secret'):
