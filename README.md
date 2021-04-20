@@ -24,7 +24,7 @@ The script is simply called by a cron job and can run on any server (does not ha
 
 ## Setup
 
-```
+```python
 # clone this repo
 git clone https://github.com/cquest/tootbot.git
 cd tootbot
