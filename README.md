@@ -15,10 +15,11 @@ A sqlite database is used to keep track of tweets than have been tooted.
 
 This script is in use for a few accounts:
 - cq94 -> https://amicale.net/@cquest (original author mastodon account)
-- Etalab -> https://mastodon.etalab.gouv.fr/@etalab
-- datagouvfr -> https://mastodon.etalab.gouv.fr/@datagouvfr
 - osm_fr -> https://fr.osm.social/@osm_fr
 - sotmfr -> https://fr.osm.social/@sotmfr
+- macbidouille -> <https://amicale.net/@macbidouille
+- nextinpact -> <https://amicale.net/@nextinpact
+- opendata -> https://amicale.net/@opendata
 
 The script is simply called by a cron job and can run on any server (does not have to be on the mastodon instance server).
 
