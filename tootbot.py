@@ -130,7 +130,9 @@ for t in reversed(d.entries):
         c = c.replace('\xa0…', ' ')
 
         if twitter is None:
-            c = c + '\nSource: '+ t.authors[0].name +'\n\n' + t.link
+            if 'authors' in t:
+                c = c + '\nSource: '+ t.authors[0].name
+            c = c + '\n\n' + t.link
 
         if tags:
             c = c + '\n' + tags
