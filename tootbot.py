@@ -98,10 +98,19 @@ for t in reversed(d.entries):
             c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
         toot_media = []
         # get the pictures...
-        for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
-            media = requests.get(p.group(0))
-            media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
-            toot_media.append(media_posted['id'])
+        if 'summary' in t:
+            for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
+                media = requests.get(p.group(0))
+                media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
+                toot_media.append(media_posted['id'])
+
+        if 'links' in t:
+            for l in t.links:
+                if l.type in ('image/jpg', 'image/png'):
+                    media = requests.get(l.url)
+                    media_posted = mastodon_api.media_post(
+                        media.content, mime_type=media.headers.get('content-type'))
+                    toot_media.append(media_posted['id'])
 
         # replace short links by original URL
         m = re.search(r"http[^ \xa0]*", c)
