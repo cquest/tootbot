@@ -136,14 +136,15 @@ for t in reversed(d.entries):
 
         if tags:
             c = c + '\n' + tags
-
+        
         if toot_media is not None:
-            toot = mastodon_api.status_post(c, in_reply_to_id=None,
+            toot = mastodon_api.status_post(c,
+                                            in_reply_to_id=None,
                                             media_ids=toot_media,
                                             sensitive=False,
                                             visibility='public',
                                             spoiler_text=None)
             if "id" in toot:
                 db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
-                           (t.id, toot["id"], source, mastodon, instance))
+                           (id, toot["id"], source, mastodon, instance))
                 sql.commit()
