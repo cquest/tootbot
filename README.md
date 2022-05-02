@@ -36,7 +36,7 @@ pip3 install -r requirements.txt
 
 ## Useage
 
-`python3 tootbot.py <twitter_pseudo> <mastodon_account> <mastodon_password> <mastodon_domain>`
+`python3 tootbot.py <twitter_pseudo> <mastodon_account> <mastodon_password> <mastodon_domain> [max_items [tags_to_add]]`
 
 Example:
 
