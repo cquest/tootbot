@@ -54,7 +54,11 @@ else:
 
 for t in reversed(d.entries):
     # check if this tweet has been processed
-    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (t.id, source, mastodon, instance))  # noqa
+    if id in t:
+        id = t.id
+    else:
+        id = t.title
+    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
     last = db.fetchone()
     dt = t.published_parsed
     age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
