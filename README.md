@@ -4,9 +4,9 @@ A small python 3.x script to replicate tweets on a mastodon account.
 
 The script only need mastodon login/pass to post toots.
 
-It gets the tweets from RSS available at http://twitrss.me, then does some cleanup on the content:
+It gets the tweets using twint, then does some cleanup on the content:
 - twitter tracking links (t.co) are dereferenced
-- twitter hosted pictures are retrieved and uploaded to mastodon
+- twitter hosted pictures or videos are retrieved and uploaded to mastodon
 
 It can also toot RSS/atom feeds (see cron-example.sh).
 
@@ -14,11 +14,10 @@ A sqlite database is used to keep track of tweets than have been tooted.
 
 
 This script is in use for a few accounts:
-- cq94 -> https://amicale.net/@cquest (original author mastodon account)
 - osm_fr -> https://fr.osm.social/@osm_fr
 - sotmfr -> https://fr.osm.social/@sotmfr
-- macbidouille -> <https://amicale.net/@macbidouille
-- nextinpact -> <https://amicale.net/@nextinpact
+- macbidouille -> https://amicale.net/@macbidouille
+- nextinpact -> https://amicale.net/@nextinpact
 - opendata -> https://amicale.net/@opendata
 
 The script is simply called by a cron job and can run on any server (does not have to be on the mastodon instance server).
