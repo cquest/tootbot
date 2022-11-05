@@ -1,3 +1,4 @@
 feedparser
 Mastodon.py
 requests
+twint @ git+https://github.com/woluxwolu/twint.git
