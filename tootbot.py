@@ -3,6 +3,8 @@ import sys
 import re
 import sqlite3
 from datetime import datetime, timedelta
+import json
+import subprocess
 
 import feedparser
 from mastodon import Mastodon
@@ -43,7 +45,33 @@ source = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
 
-mastodon_api = None
+# Create application if it does not exist
+if not os.path.isfile(instance+'.secret'):
+    if Mastodon.create_app(
+        'tootbot',
+        api_base_url='https://'+instance,
+        to_file=instance+'.secret'
+    ):
+        print('tootbot app created on instance '+instance)
+    else:
+        print('failed to create app on instance '+instance)
+        sys.exit(1)
+
+try:
+    mastodon_api = Mastodon(
+        client_id=instance+'.secret',
+        api_base_url='https://'+instance
+    )
+    mastodon_api.log_in(
+        username=mastodon,
+        password=passwd,
+        scopes=['read', 'write'],
+        to_file=mastodon+".secret"
+    )
+except:
+    print("ERROR: First Login Failed!")
+    sys.exit(1)
+
 
 if source[:4] == 'http':
     d = feedparser.parse(source)
