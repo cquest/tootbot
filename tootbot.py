@@ -140,76 +140,86 @@ if source[:4] == 'http':
                     sql.commit()
 
 else:
-    d = feedparser.parse('http://twitrss.me/twitter_user_to_rss/?user='+source)
+    subprocess.run('rm -f tweets.sjson; twint -u %s -tl --limit 10 --json -o tweets.sjson; jq -s . tweets.sjson > tweets.json' %
+                   (source,), shell=True, capture_output=True)
+    d = json.load(open('tweets.json','r'))
     twitter = source
 
-for t in reversed(d.entries):
-    # check if this tweet has been processed
-    if id in t:
-        id = t.id
-    else:
-        id = t.title
-    db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
-    last = db.fetchone()
-    dt = t.published_parsed
-    age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
-                                  dt.tm_hour, dt.tm_min, dt.tm_sec)
-    # process only unprocessed tweets less than 1 day old, after delay
-    if last is None and age < timedelta(days=days) and age > timedelta(days=delay):
-        if mastodon_api is None:
-            # Create application if it does not exist
-            if not os.path.isfile(instance+'.secret'):
-                if Mastodon.create_app(
-                    'tootbot',
-                    api_base_url='https://'+instance,
-                    to_file=instance+'.secret'
-                ):
-                    print('tootbot app created on instance '+instance)
-                else:
-                    print('failed to create app on instance '+instance)
-                    sys.exit(1)
+    for t in reversed(d):
+        c = html.unescape(t['tweet'])
+        # do not toot twitter replies
+        if 'reply_to' in t and len(t['reply_to'])>0:
+            print('Reply:',c)
+            continue
+        # do not toot twitter quoted RT
+        if 'quote_url' in t and t['quote_url'] != '':
+            print('Quoted:', c)
+            continue
 
-            try:
-                mastodon_api = Mastodon(
-                  client_id=instance+'.secret',
-                  api_base_url='https://'+instance
-                )
-                mastodon_api.log_in(
-                    username=mastodon,
-                    password=passwd,
-                    scopes=['read', 'write'],
-                    to_file=mastodon+".secret"
-                )
-            except:
-                print("ERROR: First Login Failed!")
-                sys.exit(1)
+        # check if this tweet has been processed
+        id = t['id']
+        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
+        last = db.fetchone()
 
-        c = t.title
-        if twitter and t.author.lower() != ('(@%s)' % twitter).lower():
-            c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
+        # process only unprocessed tweets
+        if last:
+            continue
+
+        if c[-1] == "…":
+            continue
+
         toot_media = []
-        # get the pictures...
-        if 'summary' in t:
-            for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
+        if twitter and t['username'].lower() != twitter.lower():
+            c = ("RT https://twitter.com/%s\n" % t['username']) + c
+            # get the pictures...
+            for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t['tweet']):
                 media = requests.get(p.group(0))
-                media_posted = mastodon_api.media_post(media.content, mime_type=media.headers.get('content-type'))
+                media_posted = mastodon_api.media_post(
+                    media.content, mime_type=media.headers.get('content-type'))
                 toot_media.append(media_posted['id'])
 
-        if 'links' in t:
-            for l in t.links:
-                if l.type in ('image/jpg', 'image/png'):
-                    media = requests.get(l.url)
-                    media_posted = mastodon_api.media_post(
-                        media.content, mime_type=media.headers.get('content-type'))
-                    toot_media.append(media_posted['id'])
+        if 'photos' in t:
+            for url in t['photos']:
+                print('photo', url)
+                media = requests.get(url)
+                print("received")
+                media_posted = mastodon_api.media_post(
+                    media.content, mime_type=media.headers.get('content-type'))
+                print("posted")
+                toot_media.append(media_posted['id'])
 
         # replace short links by original URL
-        m = re.search(r"http[^ \xa0]*", c)
-        if m is not None:
-            l = m.group(0)
+        links = re.findall(r"http[^ \xa0]*", c)
+        for l in links:
             r = requests.get(l, allow_redirects=False)
             if r.status_code in {301, 302}:
-                c = c.replace(l, r.headers.get('Location'))
+                m = re.search(r'twitter.com/.*/photo/', r.headers.get('Location'))
+                if m is None:
+                    c = c.replace(l, r.headers.get('Location'))
+                else:
+                    c = c.replace(l, '')
+
+                m = re.search(r'(twitter.com/.*/video/|youtube.com)', r.headers.get('Location'))
+                if m is None:
+                    c = c.replace(l, r.headers.get('Location'))
+                else:
+                    print('lien:',l)
+                    c = c.replace(l, '')
+                    video = r.headers.get('Location')
+                    print('video:', video)
+                    subprocess.run('rm -f out.webm; yt-dlp -N 8 -o out.webm --recode-video webm %s' %
+                                (video,), shell=True, capture_output=False)
+                    print("received")
+                    try:
+                        file = open("out.webm", "rb")
+                        video_data = file.read()
+                        file.close()
+                        media_posted = mastodon_api.media_post(video_data, mime_type='video/webm')
+                        c = c.replace(video, '')
+                        print("posted")
+                        toot_media.append(media_posted['id'])
+                    except:
+                        pass
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
@@ -220,14 +230,11 @@ for t in reversed(d.entries):
         # remove ellipsis
         c = c.replace('\xa0…', ' ')
 
-        if twitter is None:
-            if 'authors' in t:
-                c = c + '\nSource: '+ t.authors[0].name
-            c = c + '\n\n' + t.link
+        c = c.replace('  ', '\n').replace('. ', '.\n')
 
         if tags:
             c = c + '\n' + tags
-        
+
         if toot_media is not None:
             toot = mastodon_api.status_post(c,
                                             in_reply_to_id=None,
@@ -235,7 +242,8 @@ for t in reversed(d.entries):
                                             sensitive=False,
                                             visibility='public',
                                             spoiler_text=None)
+            #break
             if "id" in toot:
-                db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
-                           (id, toot["id"], source, mastodon, instance))
+                db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
                 sql.commit()
+
