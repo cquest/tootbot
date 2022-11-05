@@ -4,9 +4,9 @@ A small python 3.x script to replicate tweets on a mastodon account.
 
 The script only need mastodon login/pass to post toots.
 
-It gets the tweets using twint, then does some cleanup on the content:
+It gets the tweets using **twint**, then does some cleanup on the content:
 - twitter tracking links (t.co) are dereferenced
-- twitter hosted pictures or videos are retrieved and uploaded to mastodon
+- twitter hosted pictures or videos are retrieved with **yt-dlp** and uploaded to mastodon
 
 It can also toot RSS/atom feeds (see cron-example.sh).
 
