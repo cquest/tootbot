@@ -1,6 +1,8 @@
 import os.path
 import sys
 import re
+import html
+
 import sqlite3
 from datetime import datetime, timedelta
 import json
