@@ -214,14 +214,14 @@ else:
                     c = c.replace(l, '')
                     video = r.headers.get('Location')
                     print('video:', video)
-                    subprocess.run('rm -f out.webm; yt-dlp -N 8 -o out.webm --recode-video webm %s' %
+                    subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 %s' %
                                 (video,), shell=True, capture_output=False)
                     print("received")
                     try:
-                        file = open("out.webm", "rb")
+                        file = open("out.mp4", "rb")
                         video_data = file.read()
                         file.close()
-                        media_posted = mastodon_api.media_post(video_data, mime_type='video/webm')
+                        media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
                         c = c.replace(video, '')
                         print("posted")
                         toot_media.append(media_posted['id'])
