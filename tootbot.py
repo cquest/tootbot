@@ -237,7 +237,13 @@ else:
         # remove ellipsis
         c = c.replace('\xa0…', ' ')
 
-        c = c.replace('  ', '\n').replace('. ', '.\n')
+        #c = c.replace('  ', '\n').replace('. ', '.\n')
+
+        # replace links to twitter by nitter ones
+        c = c.replace('/twitter.com/', '/nitter.net/')
+
+        # remove utm_? tracking
+        c = re.sub('\?utm.*$', '', c)
 
         if tags:
             c = c + '\n' + tags
