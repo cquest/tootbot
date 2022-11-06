@@ -75,9 +75,13 @@ except:
     sys.exit(1)
 
 
+print(source)
+print("---------------------------")
+
 if source[:4] == 'http':
     d = feedparser.parse(source)
     twitter = None
+    print(len(d.entries))
     for t in reversed(d.entries):
         # check if this tweet has been processed
         if id in t:
@@ -147,6 +151,7 @@ else:
     d = json.load(open('tweets.json','r'))
     twitter = source
 
+    print(len(d))
     for t in reversed(d):
         c = html.unescape(t['tweet'])
         # do not toot twitter replies
@@ -249,3 +254,4 @@ else:
                 db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
                 sql.commit()
 
+print()
