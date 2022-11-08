@@ -146,6 +146,11 @@ if source[:4] == 'http':
                     sql.commit()
 
 else:
+    try:
+        os.mkdir(source)
+    except:
+        pass
+    os.chdir(source)
     subprocess.run('rm -f tweets.*json; twint -u %s -tl --limit 10 --json -o tweets.sjson; jq -s . tweets.sjson > tweets.json' %
                    (source,), shell=True, capture_output=True)
     d = json.load(open('tweets.json','r'))
