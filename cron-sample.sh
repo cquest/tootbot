@@ -7,7 +7,7 @@
 # 3- mastodon password
 # 4- instance domain (https:// is automatically added)
 # 5- max age (in days)
-# 6- footer tags to add (optionnal)
+# 6- footer tags to add (optional)
 
 python3 tootbot.py geonym_fr geonym@amicale.net **password** test.amicale.net
 python3 tootbot.py cq94 cquest@amicale.net **password** test.amicale.net
