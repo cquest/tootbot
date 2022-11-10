@@ -258,7 +258,7 @@ else:
                                             in_reply_to_id=None,
                                             media_ids=toot_media,
                                             sensitive=False,
-                                            visibility='public',
+                                            visibility='unlisted',
                                             spoiler_text=None)
             #break
             if "id" in toot:
