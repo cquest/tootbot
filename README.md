@@ -33,6 +33,11 @@ cd tootbot
 pip3 install -r requirements.txt
 ```
 
+# install additional required software
+
+apt install jq
+
+
 ## Useage
 
 `python3 tootbot.py <twitter_pseudo> <mastodon_account> <mastodon_password> <mastodon_domain> [max_items [tags_to_add]]`
