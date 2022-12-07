@@ -100,7 +100,6 @@ if source[:4] == 'http':
                 c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
             toot_media = []
             # get the pictures...
-            hasMedia = False
 
             if 'summary' in t:
                 for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
@@ -116,7 +115,6 @@ if source[:4] == 'http':
                         media_posted = mastodon_api.media_post(
                             media.content, mime_type=media.headers.get('content-type'))
                         toot_media.append(media_posted['id'])
-                        hasMedia = True
                     except:
                         print('Could not upload media to Mastodon! ' + mediaUrl)
 
@@ -127,10 +125,6 @@ if source[:4] == 'http':
                         media_posted = mastodon_api.media_post(
                             media.content, mime_type=media.headers.get('content-type'))
                         toot_media.append(media_posted['id'])
-                        hasMedia = True
-
-            if toot_media is None:
-                hasMedia = False
 
             # replace short links by original URL
             m = re.search(r"http[^ \xa0]*", c)
