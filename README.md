@@ -24,19 +24,17 @@ The script is simply called by a cron job and can run on any server (does not ha
 
 ## Setup
 
-```python
+```shell
 # clone this repo
 git clone https://github.com/cquest/tootbot.git
 cd tootbot
 
 # install required python modules
 pip3 install -r requirements.txt
-```
 
 # install additional required software
-
-apt install jq
-
+sudo apt install jq
+```
 
 ## Useage
 
