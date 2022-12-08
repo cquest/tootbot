@@ -100,6 +100,7 @@ if source[:4] == 'http':
                 c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
             toot_media = []
             # get the pictures...
+
             if 'summary' in t:
                 for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t.summary):
                     media = requests.get(p.group(0))
@@ -107,9 +108,19 @@ if source[:4] == 'http':
                         media.content, mime_type=media.headers.get('content-type'))
                     toot_media.append(media_posted['id'])
 
+                for p in re.finditer(r"https://i.redd.it/[a-zA-Z0-9]*.(gif/jpg/mp4/png|webp)", t.summary):
+                    mediaUrl = p.group(0)
+                    try:
+                        media = requests.get(mediaUrl)
+                        media_posted = mastodon_api.media_post(
+                            media.content, mime_type=media.headers.get('content-type'))
+                        toot_media.append(media_posted['id'])
+                    except:
+                        print('Could not upload media to Mastodon! ' + mediaUrl)
+
             if 'links' in t:
                 for l in t.links:
-                    if l.type in ('image/jpg', 'image/png'):
+                    if l.type in ('image/gif', 'image/jpg', 'image/png', 'image/webp'):
                         media = requests.get(l.url)
                         media_posted = mastodon_api.media_post(
                             media.content, mime_type=media.headers.get('content-type'))
@@ -119,9 +130,12 @@ if source[:4] == 'http':
             m = re.search(r"http[^ \xa0]*", c)
             if m is not None:
                 l = m.group(0)
-                r = requests.get(l, allow_redirects=False)
-                if r.status_code in {301, 302}:
-                    c = c.replace(l, r.headers.get('Location'))
+                try:
+                    r = requests.get(l, allow_redirects=False)
+                    if r.status_code in {301, 302}:
+                        c = c.replace(l, r.headers.get('Location'))
+                except:
+                    print('Cannot resolve link redirect: ' + l)
 
             # remove ellipsis
             c = c.replace('\xa0…', ' ')
@@ -129,6 +143,10 @@ if source[:4] == 'http':
             if 'authors' in t:
                 c = c + '\nSource: ' + t.authors[0].name
             c = c + '\n\n' + t.link
+
+            # replace links to reddit by libreddit ones
+            c = c.replace('old.reddit.com', 'libreddit.net')
+            c = c.replace('reddit.com', 'libreddit.net')
 
             if tags:
                 c = c + '\n' + tags
