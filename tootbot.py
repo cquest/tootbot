@@ -107,6 +107,12 @@ if source[:4] == 'http':
                     media_posted = mastodon_api.media_post(
                         media.content, mime_type=media.headers.get('content-type'))
                     toot_media.append(media_posted['id'])
+                for p in re.finditer(r"https://imgs.xkcd.com/[^ \"]*", t.summary):
+                    print(p.group(0))
+                    media = requests.get(p.group(0))
+                    media_posted = mastodon_api.media_post(
+                        media.content, mime_type=media.headers.get('content-type'))
+                    toot_media.append(media_posted['id'])
 
             if 'links' in t:
                 for l in t.links:
