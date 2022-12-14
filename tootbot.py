@@ -3,6 +3,7 @@ import sys
 import re
 import html
 import time
+import shutil
 
 import sqlite3
 from datetime import datetime, timedelta
@@ -16,12 +17,6 @@ import requests
 if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
     sys.exit(1)
-
-# sqlite db to store processed tweets (and corresponding toots ids)
-sql = sqlite3.connect('tootbot.db')
-db = sql.cursor()
-db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text,
-           twitter text, mastodon text, instance text)''')
 
 if len(sys.argv) > 4:
     instance = sys.argv[4]
@@ -43,10 +38,27 @@ if len(sys.argv) > 7:
 else:
     delay = 0
 
-
 source = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
+
+if 'http' not in source:
+    # switch to local account directory
+    try:
+        os.mkdir(source)
+    except:
+        pass
+    os.chdir(source)
+
+    # copy (old) global sqlite database to local account directory
+    if not os.path.exists('tootbot.db'):
+        shutil.copy('../tootbot.db', 'tootbot.db')
+
+sql = sqlite3.connect('tootbot.db')
+db = sql.cursor()
+db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text,
+           twitter text, mastodon text, instance text)''')
+
 
 # Create application if it does not exist
 if not os.path.isfile(instance+'.secret'):
@@ -171,11 +183,11 @@ if source[:4] == 'http':
                     sql.commit()
 
 else:
-    try:
-        os.mkdir(source)
-    except:
-        pass
-    os.chdir(source)
+    # cleanup local database after migration from the global one
+    db.execute("DELETE FROM tweets WHERE twitter != ?", (source,))
+    sql.commit()
+    db.execute("VACUUM")
+
     subprocess.run('rm -f tweets.*json; twint -u %s -tl --limit 10 --json -o tweets.sjson; jq -s . tweets.sjson > tweets.json' %
                    (source,), shell=True, capture_output=True)
     d = json.load(open('tweets.json','r'))
