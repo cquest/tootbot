@@ -218,12 +218,22 @@ else:
         if 'photos' in t:
             for url in t['photos']:
                 print('photo', url)
-                media = requests.get(url)
-                print("received")
-                media_posted = mastodon_api.media_post(
-                    media.content, mime_type=media.headers.get('content-type'))
-                print("posted")
-                toot_media.append(media_posted['id'])
+                try:
+                    media = requests.get(url.replace(
+                            'https://pbs.twimg.com/', 'https://nitter.net/pic/orig/'))
+                    print("received nitter", media.headers.get('content-type'))
+                    media_posted = mastodon_api.media_post(
+                        media.content, mime_type=media.headers.get('content-type'))
+                    print("posted")
+                    toot_media.append(media_posted['id'])
+                except:
+                    media = requests.get(url)
+                    print("received twitter", media.headers.get('content-type'))
+                    media_posted = mastodon_api.media_post(
+                        media.content, mime_type=media.headers.get('content-type'))
+                    print("posted")
+                    toot_media.append(media_posted['id'])
+
 
         # replace short links by original URL
         links = re.findall(r"http[^ \xa0]*", c)
