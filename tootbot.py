@@ -288,29 +288,31 @@ else:
         if tags:
             c = c + '\n' + tags
 
-        if toot_media is not None:
-            try:
-                toot = mastodon_api.status_post(c,
+        try:
+            if len(toot_media)>0:
+                time.sleep(5)
+            toot = mastodon_api.status_post(c,
+                                        in_reply_to_id=None,
+                                        media_ids=toot_media,
+                                        sensitive=False,
+                                        visibility='unlisted',
+                                        spoiler_text=None)
+        except:
+            print("10s delay")
+            time.sleep(10)
+            toot = mastodon_api.status_post(c,
                                             in_reply_to_id=None,
                                             media_ids=toot_media,
                                             sensitive=False,
                                             visibility='unlisted',
                                             spoiler_text=None)
-            except:
-                print("10s delay")
-                time.sleep(10)
-                toot = mastodon_api.status_post(c,
-                                                in_reply_to_id=None,
-                                                media_ids=toot_media,
-                                                sensitive=False,
-                                                visibility='unlisted',
-                                                spoiler_text=None)
-                pass
+            pass
 
-            #break
-            if "id" in toot:
-                db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
-                sql.commit()
+        #break
+        if "id" in toot:
+            db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
+            sql.commit()
+            print(source, ": tweet created at",t['created_at'])
 
 print("---------------------------")
 print()
