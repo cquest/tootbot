@@ -14,6 +14,20 @@ import feedparser
 from mastodon import Mastodon
 import requests
 
+
+def unredir(redir):
+    r = requests.get(redir, allow_redirects=False)
+    while r.status_code in {301, 302}:
+        redir = r.headers.get('Location')
+        print('redir', redir)
+        if '//ow.ly/' in redir or '//bit.ly/' in redir:
+            redir = redir.replace('https://ow.ly/', 'http://ow.ly/') # only http
+            redir = requests.get(redir, allow_redirects=False).headers.get('Location')
+            print('redir+', redir)
+        r = requests.get(redir, allow_redirects=False)
+    return redir
+
+
 if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
     sys.exit(1)
@@ -150,9 +164,8 @@ if source[:4] == 'http':
             if m is not None:
                 l = m.group(0)
                 try:
-                    r = requests.get(l, allow_redirects=False)
-                    if r.status_code in {301, 302}:
-                        c = c.replace(l, r.headers.get('Location'))
+                    redir = unredir(l)
+                    c = c.replace(l, redir)
                 except:
                     print('Cannot resolve link redirect: ' + l)
 
@@ -250,35 +263,34 @@ else:
         # replace short links by original URL
         links = re.findall(r"http[^ \xa0]*", c)
         for l in links:
-            r = requests.get(l, allow_redirects=False)
-            if r.status_code in {301, 302}:
-                m = re.search(r'twitter.com/.*/photo/', r.headers.get('Location'))
-                if m is None:
-                    c = c.replace(l, r.headers.get('Location'))
-                else:
-                    c = c.replace(l, '')
+            redir = unredir(l)
+            m = re.search(r'twitter.com/.*/photo/', redir)
+            if m is None:
+                c = c.replace(l, redir)
+            else:
+                c = c.replace(l, '')
 
-                m = re.search(r'(twitter.com/.*/video/|youtube.com)', r.headers.get('Location'))
-                if m is None:
-                    c = c.replace(l, r.headers.get('Location'))
-                else:
-                    print('lien:',l)
-                    c = c.replace(l, '')
-                    video = r.headers.get('Location')
-                    print('video:', video)
-                    subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 %s' %
-                                (video,), shell=True, capture_output=False)
-                    print("received")
-                    try:
-                        file = open("out.mp4", "rb")
-                        video_data = file.read()
-                        file.close()
-                        media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
-                        c = c.replace(video, '')
-                        print("posted")
-                        toot_media.append(media_posted['id'])
-                    except:
-                        pass
+            m = re.search(r'(twitter.com/.*/video/|youtube.com)', redir)
+            if m is None:
+                c = c.replace(l, redir)
+            else:
+                print('lien:',l)
+                c = c.replace(l, '')
+                video = redir
+                print('video:', video)
+                subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 %s' %
+                            (video,), shell=True, capture_output=False)
+                print("received")
+                try:
+                    file = open("out.mp4", "rb")
+                    video_data = file.read()
+                    file.close()
+                    media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
+                    c = c.replace(video, '')
+                    print("posted")
+                    toot_media.append(media_posted['id'])
+                except:
+                    pass
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
