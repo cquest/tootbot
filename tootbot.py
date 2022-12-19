@@ -306,8 +306,8 @@ else:
         # replace links to twitter by nitter ones
         c = c.replace('/twitter.com/', '/nitter.net/')
 
-        # remove utm_? tracking
-        c = re.sub('\?utm.*$', '', c)
+        # replace utm_? tracking
+        c = re.sub('\?utm.*$', '?utm_medium=Social&utm_source=Mastodon', c)
 
         if tags:
             c = c + '\n' + tags
