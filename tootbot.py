@@ -24,7 +24,11 @@ def unredir(redir):
             redir = redir.replace('https://ow.ly/', 'http://ow.ly/') # only http
             redir = requests.get(redir, allow_redirects=False).headers.get('Location')
             print('redir+', redir)
-        r = requests.get(redir, allow_redirects=False)
+        try:
+            r = requests.get(redir, allow_redirects=False, timeout=5)
+        except:
+            redir = redir.replace('https://', 'http://')  # only http ?
+            r = requests.get(redir, allow_redirects=False)
     return redir
 
 
