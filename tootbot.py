@@ -18,7 +18,11 @@ import requests
 def unredir(redir):
     r = requests.get(redir, allow_redirects=False)
     while r.status_code in {301, 302}:
-        redir = r.headers.get('Location')
+        if 'http' not in r.headers.get('Location'):
+            redir = re.sub(r'(https?://.*)/.*', r'\1', redir) + \
+                r.headers.get('Location')
+        else:
+            redir = r.headers.get('Location')
         print('redir', redir)
         if '//ow.ly/' in redir or '//bit.ly/' in redir:
             redir = redir.replace('https://ow.ly/', 'http://ow.ly/') # only http
