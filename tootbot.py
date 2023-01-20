@@ -126,10 +126,17 @@ if source[:4] == 'http':
         db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
         last = db.fetchone()
         dt = t.published_parsed
-        age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
+        # if the date of a feed is invalid, the parser might return a NoneType
+        if dt is None:
+            print("Couldn't parse feed date, ignoring date...")
+            process = last is None
+        else:
+            age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
                                     dt.tm_hour, dt.tm_min, dt.tm_sec)
-        # process only unprocessed tweets less than 1 day old, after delay
-        if last is None and age < timedelta(days=days) and age > timedelta(days=delay):
+            # process only unprocessed tweets less than 1 day old, after delay
+            process = last is None and age < timedelta(days=days) and age > timedelta(days=delay)
+
+        if process:
             c = t.title
             if twitter and t.author.lower() != ('(@%s)' % twitter).lower():
                 c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
