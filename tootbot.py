@@ -339,7 +339,7 @@ else:
                                         in_reply_to_id=None,
                                         media_ids=toot_media,
                                         sensitive=False,
-                                        visibility='unlisted',
+                                        visibility=mastodon_visibility,
                                         spoiler_text=None)
         except:
             print("10s delay")
@@ -348,7 +348,7 @@ else:
                                             in_reply_to_id=None,
                                             media_ids=toot_media,
                                             sensitive=False,
-                                            visibility='unlisted',
+                                            visibility=mastodon_visibility,
                                             spoiler_text=None)
             pass
 
