@@ -37,7 +37,7 @@ def unredir(redir):
 
 
 if len(sys.argv) < 4:
-    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
+    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay [unlisted]]]]")  # noqa
     sys.exit(1)
 
 if len(sys.argv) > 4:
@@ -59,6 +59,11 @@ if len(sys.argv) > 7:
     delay = int(sys.argv[7])
 else:
     delay = 0
+
+if len(sys.argv) > 8 and (int(sys.argv[8]) == 1):
+    mastodon_visibility = "unlisted"
+else:
+    mastodon_visibility = "public"
 
 source = sys.argv[1]
 mastodon = sys.argv[2]
@@ -203,7 +208,7 @@ if source[:4] == 'http':
                                                 in_reply_to_id=None,
                                                 media_ids=toot_media,
                                                 sensitive=False,
-                                                visibility='public',
+                                                visibility=mastodon_visibility,
                                                 spoiler_text=None)
                 if "id" in toot:
                     db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
