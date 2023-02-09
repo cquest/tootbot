@@ -290,7 +290,7 @@ else:
                 c = c.replace(l, '')
                 video = redir
                 print('video:', video)
-                subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist %s' %
+                subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist %s --max-filesize 100M' %
                             (video,), shell=True, capture_output=False)
                 print("received")
                 try:
