@@ -17,7 +17,11 @@ import requests
 
 def unredir(redir):
     r = requests.get(redir, allow_redirects=False)
+    redir_count = 0
     while r.status_code in {301, 302}:
+        redir_count = redir_count + 1
+        if redir_count > 10:
+            break
         if 'http' not in r.headers.get('Location'):
             redir = re.sub(r'(https?://.*)/.*', r'\1', redir) + \
                 r.headers.get('Location')
