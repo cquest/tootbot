@@ -12,6 +12,7 @@ import subprocess
 
 import feedparser
 from mastodon import Mastodon
+from mastodon.Mastodon import MastodonAPIError
 import requests
 
 
@@ -324,31 +325,39 @@ else:
         if tags:
             c = c + '\n' + tags
 
-        try:
-            if len(toot_media)>0:
-                time.sleep(5)
-            toot = mastodon_api.status_post(c,
-                                        in_reply_to_id=None,
-                                        media_ids=toot_media,
-                                        sensitive=False,
-                                        visibility='unlisted',
-                                        spoiler_text=None)
-        except:
-            print("10s delay")
-            time.sleep(10)
-            toot = mastodon_api.status_post(c,
-                                            in_reply_to_id=None,
-                                            media_ids=toot_media,
-                                            sensitive=False,
-                                            visibility='unlisted',
-                                            spoiler_text=None)
-            pass
+        # post
+        if len(toot_media)>0:
+            time.sleep(5)
 
-        #break
-        if "id" in toot:
-            db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
-            sql.commit()
-            print(source, ": tweet created at",t['created_at'])
+        while True:
+            try:
+                toot = mastodon_api.status_post(c,
+                                                in_reply_to_id=None,
+                                                media_ids=toot_media,
+                                                sensitive=False,
+                                                visibility='unlisted',
+                                                spoiler_text=None)
+
+                if "id" in toot:
+                    db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
+                    sql.commit()
+                    print(source, ": tweet created at",t['created_at'])
+
+                break
+
+            except MastodonAPIError as e:
+                description = str(e).lower()
+
+                if "422" in description and "Unprocessable Entity".lower() in description and "Try again in a moment".lower() in description:
+                    print("10s delay: ",e)
+                    time.sleep(10)
+                else:
+                    print("got an unknown API error:", e)
+                    break
+
+            except Exception as e:
+                print("got an unknown error:",  e)
+                break
 
 print("---------------------------")
 print()
