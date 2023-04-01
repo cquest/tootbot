@@ -244,6 +244,8 @@ else:
             continue
 
         toot_media = []
+        toot_media_videos = []
+
         if twitter and t['username'].lower() != twitter.lower():
             c = ("RT https://twitter.com/%s\n" % t['username']) + c
             # get the pictures...
@@ -302,6 +304,7 @@ else:
                     c = c.replace(video, '')
                     print("posted")
                     toot_media.append(media_posted['id'])
+                    toot_media_videos.append(media_posted['id'])
                 except:
                     pass
 
@@ -326,6 +329,8 @@ else:
             c = c + '\n' + tags
 
         # post
+        retry_count = 0
+        
         if len(toot_media)>0:
             time.sleep(5)
 
@@ -347,16 +352,27 @@ else:
 
             except MastodonAPIError as e:
                 description = str(e).lower()
-
+                
+                # Specific error catching work only with English instances. Not sure why Mastodon localize that.
                 if "422" in description and "Unprocessable Entity".lower() in description and "Try again in a moment".lower() in description:
-                    print("10s delay: ",e)
+                    print(source, ": medias are still processing - retry in 10 seconds.", e)
                     time.sleep(10)
+                elif "422" in description and "Unprocessable Entity".lower() in description and "Cannot attach a video to a post that already contains images".lower() in description:
+                    print(source, ": mixed images and video - retry in 5 seconds with only videos.", e)
+                    toot_media = toot_media_videos
+                    time.sleep(5)
                 else:
-                    print("got an unknown API error:", e)
-                    break
+                    retry_count = retry_count + 1
+                    
+                    if retry_count >= 2:
+                        print(source, ": got an unknown API error again - skip this tweet.", e)
+                        break
+                    else:
+                        print(source, ": got an unknown API error - retry in 10 seconds.", e)
+                        time.sleep(10)
 
             except Exception as e:
-                print("got an unknown error:",  e)
+                print(source, ": got an unknown error - skip this tweet.",  e)
                 break
 
 print("---------------------------")
