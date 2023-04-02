@@ -260,21 +260,21 @@ else:
 
         if 'photos' in t:
             for url in t['photos']:
-                print('photo', url)
+                print(source, ': download photo -', url)
                 try:
                     media = requests.get(url.replace(
                             'https://pbs.twimg.com/', 'https://nitter.net/pic/orig/'))
-                    print("received nitter", media.headers.get('content-type'))
+                    print(source, ': downloaded nitter', media.headers.get('content-type'))
                     media_posted = mastodon_api.media_post(
                         media.content, mime_type=media.headers.get('content-type'))
-                    print("posted")
+                    print(source, ': posted nitter')
                     toot_media.append(media_posted['id'])
                 except:
                     media = requests.get(url)
-                    print("received twitter", media.headers.get('content-type'))
+                    print(source, ':downloaded twitter photo', media.headers.get('content-type'))
                     media_posted = mastodon_api.media_post(
                         media.content, mime_type=media.headers.get('content-type'))
-                    print("posted")
+                    print(source, ': posted twitter photo')
                     toot_media.append(media_posted['id'])
 
 
@@ -292,14 +292,14 @@ else:
             if m is None:
                 c = c.replace(l, redir)
             else:
-                print('lien:',l)
+                print(source, ': link - ',l)
                 c = c.replace(l, '')
                 video = redir
                 
-                print('video:', video)
-                subprocess.run('rm -f out.mp4; yt-dlp -o out.mp4 -N 8 -f b -S "filesize~%sM" --recode-video mp4 --no-playlist --max-filesize 500M %s' %
+                print(source, ': download video - ', video)
+                subprocess.run("rm -f out.mp4; yt-dlp -o out.mp4 -N 8 -f b -S 'filesize~%sM' --recode-video mp4 --no-playlist --max-filesize 500M '%s'" %
                             (str(MAX_VIDEO_SIZE_MB), video,), shell=True, capture_output=False)
-                print("received")
+                print(source, ': downloaded video')
                 
                 # recompress
                 try:
@@ -320,6 +320,9 @@ else:
                         target_audio_bitrate_kbit_s = audio_bitrate_dec / Decimal(1000.0)
                         target_video_bitrate_kbit_s = (Decimal(MAX_VIDEO_SIZE_MB) * Decimal(8192.0)) / (Decimal(1.048576) * duration_dec) - target_audio_bitrate_kbit_s
                         
+                        if target_video_bitrate_kbit_s <= 0:
+                            raise Exception('result in negative bitrate ', target_video_bitrate_kbit_s)
+                        
                         subprocess.run('rm -f ffmpeg2pass*', shell=True, capture_output=False)
                         subprocess.run('ffmpeg -y -i out.mp4 -c:v libx264 -b:v %sk -pass 1 -an -f mp4 -loglevel error -stats /dev/null' % (str(target_video_bitrate_kbit_s),), shell=True, capture_output=False)
                         subprocess.run('ffmpeg -y -i out.mp4 -c:v libx264 -b:v %sk -pass 2 -c:a aac -b:a %sk -loglevel error -stats out_enc.mp4' % (str(target_video_bitrate_kbit_s),str(target_audio_bitrate_kbit_s),), shell=True, capture_output=False)
@@ -328,7 +331,7 @@ else:
                         os.remove('out.mp4')
                         os.rename('out_enc.mp4', 'out.mp4')
                 except Exception as e:
-                    print("unable to recompress", e)
+                    print(source, ': unable to recompress video', e)
                 
                 # post
                 retry_video = 0
@@ -342,7 +345,7 @@ else:
                         media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
                         c = c.replace(video, '')
                         
-                        print("posted")
+                        print(source, ': posted video')
                         
                         toot_media.append(media_posted['id'])
                         toot_media_videos.append(media_posted['id'])
@@ -353,14 +356,14 @@ else:
                         retry_video = retry_video + 1
                     
                         if retry_video >= 6:
-                            print("unable to send video - skip this video", e)
+                            print(source, ': unable to send video - skip this video', e)
                             break
                         else:
-                            print("unable to send video - retry in 10 seconds", e)
+                            print(source, ': unable to send video - retry in 10 seconds', e)
                             time.sleep(10)
                         
                     except Exception as e:
-                        print("unable to send video", e)
+                        print(source, ': unable to send video', e)
                         break
 
         # remove pic.twitter.com links
@@ -407,28 +410,37 @@ else:
 
             except MastodonAPIError as e:
                 description = str(e).lower()
-                
+                retry_post = retry_post + 1
+
                 # Specific error catching work only with English instances. Not sure why Mastodon localize that.
-                if "422" in description and "Unprocessable Entity".lower() in description and "Try again in a moment".lower() in description:
-                    print(source, ": medias are still processing - retry in 10 seconds", e)
-                    time.sleep(10)
-                elif "422" in description and "Unprocessable Entity".lower() in description and "Cannot attach a video to a post that already contains images".lower() in description:
-                    print(source, ": mixed images and video - retry in 5 seconds with only videos", e)
-                    toot_media = toot_media_videos
-                    time.sleep(5)
-                else:
-                    retry_post = retry_post + 1
-                    
-                    if retry_post >= 2:
-                        print(source, ": got an unknown API error again - skip this tweet", e)
+                if '422' in description and 'Unprocessable Entity'.lower() in description and 'Try again in a moment'.lower() in description:
+                    if retry_post >= 10:
+                        print(source, ': medias take too long to proceed - skip this tweet', e)
                         break
                     else:
-                        print(source, ": got an unknown API error - retry in 10 seconds", e)
+                        print(source, ': medias are still processing - retry in 10 seconds', e)
+                        time.sleep(10)
+
+                elif '422' in description and 'Unprocessable Entity'.lower() in description and 'Cannot attach a video to a post that already contains images'.lower() in description:
+                    if retry_post >= 2:
+                        print(source, ': unexpected mixed images and videos - skip this tweet', e)
+                        break
+                    else:
+                        print(source, ': mixed images and videos - retry in 5 seconds with only videos', e)
+                        toot_media = toot_media_videos
+                        time.sleep(5)
+                
+                else:
+                    if retry_post >= 5:
+                        print(source, ': got an unknown API error again - skip this tweet', e)
+                        break
+                    else:
+                        print(source, ': got an unknown API error - retry in 10 seconds', e)
                         time.sleep(10)
 
             except Exception as e:
-                print(source, ": got an unknown error - skip this tweet",  e)
+                print(source, ': got an unknown error - skip this tweet',  e)
                 break
 
-print("---------------------------")
+print('---------------------------')
 print()
