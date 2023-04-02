@@ -320,7 +320,7 @@ else:
                         target_audio_bitrate_kbit_s = audio_bitrate_dec / Decimal(1000.0)
                         target_video_bitrate_kbit_s = (Decimal(MAX_VIDEO_SIZE_MB) * Decimal(8192.0)) / (Decimal(1.048576) * duration_dec) - target_audio_bitrate_kbit_s
                         
-                        if target_video_bitrate_kbit_s <= 0:
+                        if target_video_bitrate_kbit_s <= Decimal(0):
                             raise Exception('result in negative bitrate ', target_video_bitrate_kbit_s)
                         
                         subprocess.run('rm -f ffmpeg2pass*', shell=True, capture_output=False)
