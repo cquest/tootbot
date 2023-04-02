@@ -288,7 +288,7 @@ else:
             else:
                 c = c.replace(l, '')
 
-            m = re.search(r'(twitter.com/.*/video/|youtube.com)', redir)
+            m = re.search(r'(twitter.com/.*/video/)', redir)
             if m is None:
                 c = c.replace(l, redir)
             else:
