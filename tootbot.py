@@ -286,23 +286,30 @@ else:
             if m is None:
                 c = c.replace(l, redir)
             else:
-                print('lien:',l)
-                c = c.replace(l, '')
                 video = redir
                 print('video:', video)
-                subprocess.run('rm -f out.mp4; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist %s --max-filesize 100M' %
-                            (video,), shell=True, capture_output=False)
-                print("received")
-                try:
-                    file = open("out.mp4", "rb")
-                    video_data = file.read()
-                    file.close()
-                    media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
-                    c = c.replace(video, '')
-                    print("posted")
-                    toot_media.append(media_posted['id'])
-                except:
-                    pass
+                video_json = subprocess.run('yt-dlp -s -j %s' %
+                               (video,), shell=True, capture_output=True)
+                video_info = json.loads(video_json.stdout)
+                if video_info['duration'] < 600:
+                    print('lien:', l)
+                    c = c.replace(l, '')
+                    subprocess.run('rm -f out.*; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist --max-filesize 100M %s' %
+                                (video,), shell=True, capture_output=False)
+                    print("received")
+                    try:
+                        file = open("out.mp4", "rb")
+                        video_data = file.read()
+                        file.close()
+                        media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
+                        c = c.replace(video, '')
+                        print("posted")
+                        toot_media.append(media_posted['id'])
+                        os.remove("out.mp4")
+                    except:
+                        pass
+                else:
+                    print("video duration > 600s : ", video_info['duration'])
 
         # remove pic.twitter.com links
         m = re.search(r"pic.twitter.com[^ \xa0]*", c)
