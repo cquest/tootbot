@@ -230,13 +230,24 @@ else:
             # print('Quoted:', c)
             continue
 
-        # check if this tweet has been processed
-        id = t['id']
-        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
-        last = db.fetchone()
+        # detect threads
+        in_reply_to = None
+        if 'conversation_id' in t and t['conversation_id'] not in t['link']:
+            db.execute('SELECT toot FROM tweets WHERE tweet = ? AND twitter = ?', (t['conversation_id'], source))  # noqa
+            thread = db.fetchone()
+            if thread:
+                print("Thread :", t['conversation_id'], t['link'], thread[0])
+                in_reply_to = thread[0]
 
-        # process only unprocessed tweets
-        if last:
+        # check if this tweet has been processed
+        id = t['id'] # old id
+        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
+        if db.fetchone():
+            continue
+
+        id = t['link'].split('/')[-1] # new id from status link to support threads
+        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
+        if db.fetchone():
             continue
 
         if c[-1] == "…":
@@ -335,16 +346,16 @@ else:
             if len(toot_media)>0:
                 time.sleep(5)
             toot = mastodon_api.status_post(c,
-                                        in_reply_to_id=None,
+                                        in_reply_to_id=in_reply_to,
                                         media_ids=toot_media,
                                         sensitive=False,
                                         visibility='unlisted',
                                         spoiler_text=None)
         except:
-            print("10s delay")
-            time.sleep(10)
+            print("delay")
+            time.sleep(30)
             toot = mastodon_api.status_post(c,
-                                            in_reply_to_id=None,
+                                            in_reply_to_id=in_reply_to,
                                             media_ids=toot_media,
                                             sensitive=False,
                                             visibility='unlisted',
