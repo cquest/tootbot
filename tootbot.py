@@ -27,11 +27,11 @@ def unredir(redir):
                 r.headers.get('Location')
         else:
             redir = r.headers.get('Location')
-        print('redir', redir)
+        # print('redir', redir)
         if '//ow.ly/' in redir or '//bit.ly/' in redir:
             redir = redir.replace('https://ow.ly/', 'http://ow.ly/') # only http
             redir = requests.get(redir, allow_redirects=False).headers.get('Location')
-            print('redir+', redir)
+            # print('redir+', redir)
         try:
             r = requests.get(redir, allow_redirects=False, timeout=5)
         except:
@@ -223,11 +223,11 @@ else:
         c = html.unescape(t['tweet'])
         # do not toot twitter replies
         if 'reply_to' in t and len(t['reply_to'])>0:
-            print('Reply:',c)
+            # print('Reply:',c)
             continue
         # do not toot twitter quoted RT
         if 'quote_url' in t and t['quote_url'] != '':
-            print('Quoted:', c)
+            # print('Quoted:', c)
             continue
 
         # check if this tweet has been processed
@@ -254,21 +254,21 @@ else:
 
         if 'photos' in t:
             for url in t['photos']:
-                print('photo', url)
+                # print('photo', url)
                 try:
                     media = requests.get(url.replace(
                             'https://pbs.twimg.com/', 'https://nitter.net/pic/orig/'))
-                    print("received nitter", media.headers.get('content-type'))
+                    # print("received nitter", media.headers.get('content-type'))
                     media_posted = mastodon_api.media_post(
                         media.content, mime_type=media.headers.get('content-type'))
-                    print("posted")
+                    # print("posted")
                     toot_media.append(media_posted['id'])
                 except:
                     media = requests.get(url)
-                    print("received twitter", media.headers.get('content-type'))
+                    # print("received twitter", media.headers.get('content-type'))
                     media_posted = mastodon_api.media_post(
                         media.content, mime_type=media.headers.get('content-type'))
-                    print("posted")
+                    # print("posted")
                     toot_media.append(media_posted['id'])
 
 
@@ -287,23 +287,23 @@ else:
                 c = c.replace(l, redir)
             else:
                 video = redir
-                print('video:', video)
+                # print('video:', video)
                 video_json = subprocess.run('yt-dlp -s -j %s' %
                                (video,), shell=True, capture_output=True)
                 video_info = json.loads(video_json.stdout)
                 if video_info['duration'] < 600:
-                    print('lien:', l)
+                    # print('lien:', l)
                     c = c.replace(l, '')
                     subprocess.run('rm -f out.*; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist --max-filesize 100M %s' %
                                 (video,), shell=True, capture_output=False)
-                    print("received")
+                    # print("received")
                     try:
                         file = open("out.mp4", "rb")
                         video_data = file.read()
                         file.close()
                         media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
                         c = c.replace(video, '')
-                        print("posted")
+                        # print("posted")
                         toot_media.append(media_posted['id'])
                         os.remove("out.mp4")
                     except:
