@@ -230,25 +230,23 @@ else:
             # print('Quoted:', c)
             continue
 
+        # check if this tweet has been processed
+        # new id from status link to support threads
+        id = t['link'].split('/')[-1]
+        db.execute('SELECT * FROM tweets WHERE (tweet like ? or tweet = ?) AND twitter = ? and mastodon = ? and instance = ?', (id+'%', t['id'], source, mastodon, instance))  # noqa
+        if db.fetchone():
+            continue
+
         # detect threads
         in_reply_to = None
         if 'conversation_id' in t and t['conversation_id'] not in t['link']:
-            db.execute('SELECT toot FROM tweets WHERE tweet = ? AND twitter = ?', (t['conversation_id'], source))  # noqa
+            db.execute('SELECT toot FROM tweets WHERE tweet like ? AND twitter = ? ORDER BY tweet DESC LIMIT 1', ('% '+t['conversation_id'], source))  # noqa
             thread = db.fetchone()
             if thread:
-                print("Thread :", t['conversation_id'], t['link'], thread[0])
-                in_reply_to = thread[0]
+                in_reply_to = thread[0].split()[-1]
+                print("Thread :", t['conversation_id'],
+                      t['link'], thread[0], in_reply_to)
 
-        # check if this tweet has been processed
-        id = t['id'] # old id
-        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
-        if db.fetchone():
-            continue
-
-        id = t['link'].split('/')[-1] # new id from status link to support threads
-        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
-        if db.fetchone():
-            continue
 
         if c[-1] == "…":
             continue
@@ -364,7 +362,7 @@ else:
 
         #break
         if "id" in toot:
-            db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id, toot["id"], source, mastodon, instance))
+            db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id+' '+t['conversation_id'], toot["id"], source, mastodon, instance))
             sql.commit()
             print(source, ": tweet created at",t['created_at'])
 
