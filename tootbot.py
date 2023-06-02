@@ -42,7 +42,7 @@ def unredir(redir):
 
 
 if len(sys.argv) < 4:
-    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
+    print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay [unlisted]]]]")  # noqa
     sys.exit(1)
 
 if len(sys.argv) > 4:
@@ -64,6 +64,11 @@ if len(sys.argv) > 7:
     delay = int(sys.argv[7])
 else:
     delay = 0
+
+if len(sys.argv) > 8 and (int(sys.argv[8]) == 1):
+    mastodon_visibility = "unlisted"
+else:
+    mastodon_visibility = "public"
 
 source = sys.argv[1]
 mastodon = sys.argv[2]
@@ -131,10 +136,17 @@ if source[:4] == 'http':
         db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
         last = db.fetchone()
         dt = t.published_parsed
-        age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
+        # if the date of a feed is invalid, the parser might return a NoneType
+        if dt is None:
+            print("Couldn't parse feed date, ignoring date...")
+            process = last is None
+        else:
+            age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
                                     dt.tm_hour, dt.tm_min, dt.tm_sec)
-        # process only unprocessed tweets less than 1 day old, after delay
-        if last is None and age < timedelta(days=days) and age > timedelta(days=delay):
+            # process only unprocessed tweets less than 1 day old, after delay
+            process = last is None and age < timedelta(days=days) and age > timedelta(days=delay)
+
+        if process:
             c = t.title
             if twitter and t.author.lower() != ('(@%s)' % twitter).lower():
                 c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
@@ -201,7 +213,7 @@ if source[:4] == 'http':
                                                 in_reply_to_id=None,
                                                 media_ids=toot_media,
                                                 sensitive=False,
-                                                visibility='public',
+                                                visibility=mastodon_visibility,
                                                 spoiler_text=None)
                 if "id" in toot:
                     db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
