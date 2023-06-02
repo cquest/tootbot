@@ -22,16 +22,14 @@ def unredir(redir):
         redir_count = redir_count + 1
         if redir_count > 10:
             break
-        if 'http' not in r.headers.get('Location'):
-            redir = re.sub(r'(https?://.*)/.*', r'\1', redir) + \
-                r.headers.get('Location')
+        location = r.headers.get('Location')
+        if 'http' not in location:
+            redir = re.sub(r'(https?://[^/]*).*$', r'\1', redir) + location
         else:
-            redir = r.headers.get('Location')
-        # print('redir', redir)
+            redir = location
         if '//ow.ly/' in redir or '//bit.ly/' in redir:
             redir = redir.replace('https://ow.ly/', 'http://ow.ly/') # only http
             redir = requests.get(redir, allow_redirects=False).headers.get('Location')
-            # print('redir+', redir)
         try:
             r = requests.get(redir, allow_redirects=False, timeout=5)
         except:
