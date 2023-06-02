@@ -23,6 +23,9 @@ def unredir(redir):
         if redir_count > 10:
             break
         location = r.headers.get('Location')
+        if 'go.france24.com' in redir:
+            # decoding hack in case "location" header is UTF-8 encoded (should not !)
+            location = location.encode("latin1").decode("utf-8")
         if 'http' not in location:
             redir = re.sub(r'(https?://[^/]*).*$', r'\1', redir) + location
         else:
