@@ -202,7 +202,7 @@ if source[:4] == 'http':
                                                 in_reply_to_id=None,
                                                 media_ids=toot_media,
                                                 sensitive=False,
-                                                visibility='public',
+                                                visibility='unlisted',
                                                 spoiler_text=None)
                 if "id" in toot:
                     db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
