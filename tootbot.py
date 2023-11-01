@@ -100,19 +100,23 @@ if not os.path.isfile(instance+'.secret'):
         sys.exit(1)
 
 try:
-    mastodon_api = Mastodon(
-        client_id=instance+'.secret',
-        api_base_url='https://'+instance
-    )
-    mastodon_api.log_in(
-        username=mastodon,
-        password=passwd,
-        scopes=['read', 'write'],
-        to_file=mastodon+".secret"
-    )
+    mastodon_api = Mastodon(access_token=mastodon+".secret")
 except:
-    print("ERROR: First Login Failed!")
-    sys.exit(1)
+    try:
+        mastodon_api = Mastodon(
+            client_id=instance+'.secret',
+            api_base_url='https://'+instance
+        )
+        print('login')
+        mastodon_api.log_in(
+            username=mastodon,
+            password=passwd,
+            scopes=['read', 'write'],
+            to_file=mastodon+".secret"
+        )
+    except:
+        print("ERROR: First Login Failed!")
+        sys.exit(1)
 
 
 print(source)
