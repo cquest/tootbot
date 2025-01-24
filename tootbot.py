@@ -207,8 +207,33 @@ if source[:4] == 'http':
                         toot_media.append(media_posted['id'])
                     except:
                         print('Could not upload media to Mastodon! ' + mediaUrl)
-
-            if 'links' in t:
+                     
+            if 'media_content' in t:
+                for m in t.media_content:
+                    if m['type'] in ('image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/webp'):
+                        media = requests.get(m['url'], headers = {'User-agent': 'Mozilla/5.0'})
+                        if media.status_code == 200:
+                            try:
+                                media_posted = mastodon_api.media_post(
+                                    media.content,
+                                    mime_type=media.headers.get('content-type'),
+                                    description=alt)
+                            except:
+                                # resize picture
+                                height = int(m['height'])
+                                width = int(m['width'])
+                                height = str(int(1.0 * height / width * 1024))
+                                width = '1024'
+                                new_url = m['url'].replace('height='+m['height'], 'height='+height).replace('width='+m['width'], 'width='+width)
+                                media = requests.get(new_url, headers = {'User-agent': 'Mozilla/5.0'})
+                                if media.status_code == 200:
+                                    media_posted = mastodon_api.media_post(
+                                        media.content,
+                                        mime_type=media.headers.get('content-type'),
+                                        description=alt)
+                            toot_media.append(media_posted['id'])
+                            break
+            elif 'links' in t:
                 for l in t.links:
                     if l.type in ('image/gif', 'image/jpg', 'image/png', 'image/webp'):
                         media = requests.get(l.url, headers = {'User-agent': 'Mozilla/5.0'})
