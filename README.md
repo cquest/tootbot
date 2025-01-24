@@ -1,24 +1,17 @@
 # TootBot
 
-A small python 3.x script to replicate tweets on a mastodon account.
+A small python 3.x script to replicate RSS and posts on bluesky to a mastodon account.
 
 The script only need mastodon login/pass to post toots.
 
-It gets the tweets using **twint**, then does some cleanup on the content:
-- twitter tracking links (t.co) are dereferenced
-- twitter hosted pictures or videos are retrieved with **yt-dlp** and uploaded to mastodon
+It gets the BS posts thru their public API.
+- externally hosted pictures or videos are retrieved with **yt-dlp** and uploaded to mastodon
 
 It can also toot RSS/atom feeds (see cron-example.sh).
 
 A sqlite database is used to keep track of tweets than have been tooted.
 
-
-This script is in use for a few accounts:
-- osm_fr -> https://fr.osm.social/@osm_fr
-- sotmfr -> https://fr.osm.social/@sotmfr
-- macbidouille -> https://amicale.net/@macbidouille
-- nextinpact -> https://amicale.net/@nextinpact
-- opendata -> https://amicale.net/@opendata
+Threads are maintained as far as possible, but replies and reposts and not replicated.
 
 The script is simply called by a cron job and can run on any server (does not have to be on the mastodon instance server).
 
@@ -33,7 +26,7 @@ cd tootbot
 pip3 install -r requirements.txt
 
 # install additional required software
-sudo apt install jq
+sudo apt install jq ffmpeg
 ```
 
 ## Useage
