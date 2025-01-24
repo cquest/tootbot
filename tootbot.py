@@ -14,6 +14,9 @@ import feedparser
 from mastodon import Mastodon
 import requests
 
+def log(msg):
+     if False:
+        print('\033[96m'+msg+'\033[0m', file=sys.stderr) # cyan in console
 
 def unredir(redir):
     r = requests.get(redir, allow_redirects=False)
@@ -94,20 +97,22 @@ if not os.path.isfile(instance+'.secret'):
         api_base_url='https://'+instance,
         to_file=instance+'.secret'
     ):
-        print('tootbot app created on instance '+instance)
+        log('tootbot app created on instance '+instance)
     else:
-        print('failed to create app on instance '+instance)
+        log('failed to create app on instance '+instance)
         sys.exit(1)
 
+global mastodon_api
 try:
     mastodon_api = Mastodon(access_token=mastodon+".secret")
+    log('logged')
 except:
     try:
         mastodon_api = Mastodon(
             client_id=instance+'.secret',
             api_base_url='https://'+instance
         )
-        print('login')
+        log('login')
         mastodon_api.log_in(
             username=mastodon,
             password=passwd,
