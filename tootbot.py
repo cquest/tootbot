@@ -270,6 +270,7 @@ if source[:4] == 'http':
                     continue
 
             c = c + '\n\n' + t.link
+            c = re.sub(r'(\?|&)utm.*$', r'\1utm_medium=Social&utm_source=Mastodon', c)
 
             # replace links to reddit by libreddit ones
             c = c.replace('old.reddit.com', 'libreddit.net')
