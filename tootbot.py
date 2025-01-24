@@ -68,6 +68,11 @@ if len(sys.argv) > 7:
 else:
     delay = 0
 
+if len(sys.argv) > 8:
+    lang = sys.argv[8]
+else:
+    lang = 'fr'
+
 source = sys.argv[1]
 mastodon = sys.argv[2]
 passwd = sys.argv[3]
@@ -359,7 +364,7 @@ else:
                                         media_ids=toot_media,
                                         sensitive=False,
                                         visibility='unlisted',
-                                        spoiler_text=None)
+                                        spoiler_text=None, language=lang)
         except:
             print("delay")
             time.sleep(30)
@@ -368,7 +373,7 @@ else:
                                             media_ids=toot_media,
                                             sensitive=False,
                                             visibility='unlisted',
-                                            spoiler_text=None)
+                                            spoiler_text=None, language=lang)
             pass
 
         #break
