@@ -1,3 +1,6 @@
 *.secret
 cron.sh
+*.db
+*.html
+*.log
 
