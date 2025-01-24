@@ -265,7 +265,10 @@ if source[:4] == 'http':
                         c = c + '…'
 
             if 'authors' in t:
-                c = c + '\nSource: ' + t.authors[0].name
+                c = c + ('\n(%s) ' % t.authors[0].name)
+                if 'ATEXO' in t.authors[0].name:
+                    continue
+
             c = c + '\n\n' + t.link
 
             # replace links to reddit by libreddit ones
