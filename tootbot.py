@@ -145,7 +145,7 @@ except:
             to_file=mastodon+".secret"
         )
     except:
-        print("ERROR: First Login Failed!")
+        log("ERROR: First Login Failed!")
         sys.exit(1)
 
 
