@@ -1,14 +1,7 @@
-import os.path
-import sys
-import re
-import html
-import time
-import shutil
+#! /bin/env python3
 
-import sqlite3
+import os.path, sys, re, time, shutil, sqlite3, json, subprocess
 from datetime import datetime, timedelta
-import json
-import subprocess
 
 import feedparser
 from mastodon import Mastodon
