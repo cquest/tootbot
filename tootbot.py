@@ -152,7 +152,114 @@ except:
 print(source)
 print("---------------------------")
 
-if source[:4] == 'http':
+if 'bsky' in source:
+    source = source.replace('bsky:','')
+    url = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=%s&filter=posts_with_replies&includePins=false' % source
+    log('GET '+url)
+    get_bsky = requests.get(url)
+    bsky = json.loads(get_bsky.text)
+    print(len(bsky['feed']))
+    for t in reversed(bsky['feed']):
+        if t['post']['author']['handle'] != source:
+            log('repost, skipped')
+            continue
+
+        db.execute('SELECT * FROM tweets WHERE (tweet = ?) AND twitter = ?  and mastodon = ? and instance = ?',   # noqa
+            (t['post']['uri'], source, mastodon, instance))
+        last = db.fetchone()
+        if last:
+            log('already tooted : '+t['post']['uri'])
+            continue
+
+        log(json.dumps(t, indent=4))
+        if 'post' in t:
+            reply_masto = None
+            if 'reply' in t:
+                reply = t['reply']
+                db.execute('SELECT toot FROM tweets WHERE (tweet = ?) AND twitter = ?  and mastodon = ? and instance = ?',   # noqa
+                                (reply['parent']['uri'], source, mastodon, instance))
+                last = db.fetchone()
+                if last:
+                    reply_masto = last[0]
+                    log('reply %s -> %s' %(reply['parent']['uri'],reply_masto))
+                else:
+                    log('reply')
+                    continue
+
+            toot_media = []
+            language = lang
+            c = t['post']['record']['text']
+
+            if 'langs' in t['post']:
+                language = t['post']['lang'][0]
+
+            if 'facets' in t['post']['record']:
+                for facet in reversed(t['post']['record']['facets']):
+                    if facet['features'][0]['$type'] == 'app.bsky.richtext.facet#link':
+                        b = c.encode()
+                        old = b[facet['index']['byteStart']:facet['index']['byteEnd']]
+                        c = c.replace(old.decode(),facet['features'][0]['uri'])
+
+            if 'embed' in t['post']['record']:
+                embed = t['post']['record']['embed']
+                embed_type = embed['$type']
+                if embed_type == 'app.bsky.embed.external':
+                    # check that the link is not already in the text
+                    if embed['external']['uri'] not in c:
+                        c = c + '\n\n' + embed['external']['uri']
+
+            if 'embed' in t['post']['record']:
+                embed = t['post']['embed']
+                if 'app.bsky.embed.images' in embed['$type']:
+                    for img in embed['images']:
+                        print(img['fullsize'])
+                        media = requests.get(img['fullsize'], headers = {'User-agent': 'Mozilla/5.0'})
+                        if media.status_code == 200:
+                            media_posted = mastodon_api.media_post(
+                                media.content, mime_type=media.headers.get('content-type'))
+                            toot_media.append(media_posted['id'])
+                elif 'app.bsky.embed.video' in embed['$type']:
+                    media_posted = post_video(embed['playlist'])
+                    toot_media.append(media_posted['id'])
+                elif 'app.bsky.embed.external' in embed['$type']:
+                    if 'youtube.com' in embed['external']['uri']:
+                        media_posted = post_video(embed['external']['uri'])
+                        toot_media.append(media_posted['id'])
+                        c = c.replace(embed['external']['uri'],'')
+                elif 'app.bsky.embed.recordWithMedia' in embed['$type']:
+                    log('unhandled app.bsky.embed.recordWithMedia')
+                    continue
+                    if 'app.bsky.embed.video' in embed['media']['$type']:
+                        media_posted = post_media(embed['media']['playlist'])
+                        toot_media.append(media_posted['id'])
+                elif 'app.bsky.embed.record' in embed['$type']:
+                    log('unhandled app.bsky.embed.record')
+                    continue
+
+            retries = 10
+            toot = None
+            while toot is None and retries > 0:
+                try:
+                    toot = mastodon_api.status_post(c,
+                                        in_reply_to_id=reply_masto,
+                                        media_ids=toot_media,
+                                        sensitive=False,
+                                        visibility='unlisted',
+                                        spoiler_text=None,
+                                        language=language)
+                except:
+                    log('delayed due to media processing')
+                    time.sleep(10)
+                    retries = retries - 1
+                    pass
+
+            if "id" in toot:
+                db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
+                        (t['post']['uri'], toot["id"], source, mastodon, instance))
+                sql.commit()
+
+
+elif source[:4] == 'http':
     d = feedparser.parse(source)
     twitter = None
     print(len(d.entries))
