@@ -162,7 +162,9 @@ if source[:4] == 'http':
             id = t.id
         else:
             id = t.title
-        db.execute('SELECT * FROM tweets WHERE tweet = ? AND twitter = ?  and mastodon = ? and instance = ?', (id, source, mastodon, instance))  # noqa
+
+        db.execute('SELECT * FROM tweets WHERE (tweet = ? or tweet = ?) AND twitter = ?  and mastodon = ? and instance = ?',   # noqa
+            (id, t.link, source, mastodon, instance))
         last = db.fetchone()
         dt = t.published_parsed
         age = datetime.now()-datetime(dt.tm_year, dt.tm_mon, dt.tm_mday,
