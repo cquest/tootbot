@@ -158,7 +158,7 @@ if source[:4] == 'http':
     print(len(d.entries))
     for t in reversed(d.entries):
         # check if this tweet has been processed
-        if id in t:
+        if 'id' in t:
             id = t.id
         else:
             id = t.title
@@ -169,7 +169,15 @@ if source[:4] == 'http':
                                     dt.tm_hour, dt.tm_min, dt.tm_sec)
         # process only unprocessed tweets less than 1 day old, after delay
         if last is None and age < timedelta(days=days) and age > timedelta(days=delay):
-            c = t.title
+            try:
+                alt = t.summary_detail.value
+            except:
+                alt = None
+                pass
+
+            if 'title' in t:
+                c = t.title
+
             if twitter and t.author.lower() != ('(@%s)' % twitter).lower():
                 c = ("RT https://twitter.com/%s\n" % t.author[2:-1]) + c
             toot_media = []
