@@ -256,6 +256,14 @@ if source[:4] == 'http':
             # remove ellipsis
             c = c.replace('\xa0…', ' ')
 
+            if ('marianne' in mastodon) and 'summary' in t:
+                c = c + '\n\n' + t.summary
+                if len(c)>450:
+                    fin = c[450:].split(' ')
+                    c = c[:450] + fin[0]
+                    if len(fin)>1:
+                        c = c + '…'
+
             if 'authors' in t:
                 c = c + '\nSource: ' + t.authors[0].name
             c = c + '\n\n' + t.link
