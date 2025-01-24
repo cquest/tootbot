@@ -235,12 +235,13 @@ if source[:4] == 'http':
                             break
             elif 'links' in t:
                 for l in t.links:
-                    if l.type in ('image/gif', 'image/jpg', 'image/png', 'image/webp'):
+                    if l.type in ('image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/webp'):
                         media = requests.get(l.url, headers = {'User-agent': 'Mozilla/5.0'})
                         if media.status_code == 200:
                             media_posted = mastodon_api.media_post(
                                 media.content, mime_type=media.headers.get('content-type'))
                             toot_media.append(media_posted['id'])
+                            break
 
             # replace short links by original URL
             m = re.search(r"http[^ \xa0]*", c)
