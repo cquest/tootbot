@@ -1,5 +1,4 @@
-feedparser>=6.0.10
-Mastodon.py==1.8.1
-requests==2.31.0
-twint @ git+https://github.com/woluxwolu/twint.git
-yt-dlp>=2023.3.4
+feedparser>=6.0.11
+Mastodon.py>=1.8.1
+requests>=2.32.3
+yt-dlp>=2025.1.15
