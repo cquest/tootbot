@@ -19,6 +19,7 @@ def log(msg):
         print('\033[96m'+msg+'\033[0m', file=sys.stderr) # cyan in console
 
 def unredir(redir):
+    # deshorten links and redirections
     r = requests.get(redir, allow_redirects=False)
     redir_count = 0
     while r.status_code in {301, 302}:
@@ -113,7 +114,6 @@ sql = sqlite3.connect('tootbot.db')
 db = sql.cursor()
 db.execute('''CREATE TABLE IF NOT EXISTS tweets (tweet text, toot text,
            twitter text, mastodon text, instance text)''')
-
 
 # Create application if it does not exist
 if not os.path.isfile(instance+'.secret'):
@@ -237,170 +237,11 @@ if source[:4] == 'http':
                                                 media_ids=toot_media,
                                                 sensitive=False,
                                                 visibility='unlisted',
-                                                spoiler_text=None)
+                                                spoiler_text=None, language=lang)
                 if "id" in toot:
                     db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )",
-                            (id, toot["id"], source, mastodon, instance))
+                            (t.link, toot["id"], source, mastodon, instance))
                     sql.commit()
-
-else:
-    # cleanup local database after migration from the global one
-    db.execute("DELETE FROM tweets WHERE twitter != ?", (source,))
-    sql.commit()
-    db.execute("VACUUM")
-
-    subprocess.run('rm -f tweets.*json; twint -u %s -tl --limit 10 --json -o tweets.sjson; jq -s . tweets.sjson > tweets.json' %
-                   (source,), shell=True, capture_output=True)
-    d = json.load(open('tweets.json','r'))
-    twitter = source
-
-    print(len(d))
-    for t in reversed(d):
-        c = html.unescape(t['tweet'])
-        # do not toot twitter replies
-        if 'reply_to' in t and len(t['reply_to'])>0:
-            # print('Reply:',c)
-            continue
-        # do not toot twitter quoted RT
-        if 'quote_url' in t and t['quote_url'] != '':
-            # print('Quoted:', c)
-            continue
-
-        # check if this tweet has been processed
-        # new id from status link to support threads
-        id = t['link'].split('/')[-1]
-        db.execute('SELECT * FROM tweets WHERE (tweet like ? or tweet = ?) AND twitter = ? and mastodon = ? and instance = ?', (id+'%', t['id'], source, mastodon, instance))  # noqa
-        if db.fetchone():
-            continue
-
-        # detect threads
-        in_reply_to = None
-        if 'conversation_id' in t and t['conversation_id'] not in t['link']:
-            db.execute('SELECT toot FROM tweets WHERE tweet like ? AND twitter = ? ORDER BY tweet DESC LIMIT 1', ('% '+t['conversation_id'], source))  # noqa
-            thread = db.fetchone()
-            if thread:
-                in_reply_to = thread[0].split()[-1]
-                print("Thread :", t['conversation_id'],
-                      t['link'], thread[0], in_reply_to)
-
-
-        if c[-1] == "…":
-            continue
-
-        toot_media = []
-        if twitter and t['username'].lower() != twitter.lower():
-            c = ("RT https://twitter.com/%s\n" % t['username']) + c
-            # get the pictures...
-            for p in re.finditer(r"https://pbs.twimg.com/[^ \xa0\"]*", t['tweet']):
-                media = requests.get(p.group(0))
-                media_posted = mastodon_api.media_post(
-                    media.content, mime_type=media.headers.get('content-type'))
-                toot_media.append(media_posted['id'])
-
-        if 'photos' in t:
-            for url in t['photos']:
-                # print('photo', url)
-                try:
-                    media = requests.get(url.replace(
-                            'https://pbs.twimg.com/', 'https://nitter.net/pic/orig/'))
-                    # print("received nitter", media.headers.get('content-type'))
-                    media_posted = mastodon_api.media_post(
-                        media.content, mime_type=media.headers.get('content-type'))
-                    # print("posted")
-                    toot_media.append(media_posted['id'])
-                except:
-                    media = requests.get(url)
-                    # print("received twitter", media.headers.get('content-type'))
-                    media_posted = mastodon_api.media_post(
-                        media.content, mime_type=media.headers.get('content-type'))
-                    # print("posted")
-                    toot_media.append(media_posted['id'])
-
-
-        # replace short links by original URL
-        links = re.findall(r"http[^ \xa0]*", c)
-        for l in links:
-            redir = unredir(l)
-            m = re.search(r'twitter.com/.*/photo/', redir)
-            if m is None:
-                c = c.replace(l, redir)
-            else:
-                c = c.replace(l, '')
-
-            m = re.search(r'(twitter.com/.*/video/|youtube.com)', redir)
-            if m is None:
-                c = c.replace(l, redir)
-            else:
-                video = redir
-                # print('video:', video)
-                video_json = subprocess.run('yt-dlp -s -j %s' %
-                               (video,), shell=True, capture_output=True)
-                video_info = json.loads(video_json.stdout)
-                if video_info['duration'] < 600:
-                    # print('lien:', l)
-                    c = c.replace(l, '')
-                    subprocess.run('rm -f out.*; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist --max-filesize 100M %s' %
-                                (video,), shell=True, capture_output=False)
-                    # print("received")
-                    try:
-                        file = open("out.mp4", "rb")
-                        video_data = file.read()
-                        file.close()
-                        media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
-                        c = c.replace(video, '')
-                        # print("posted")
-                        toot_media.append(media_posted['id'])
-                        os.remove("out.mp4")
-                    except:
-                        pass
-                else:
-                    print("video duration > 600s : ", video_info['duration'])
-
-        # remove pic.twitter.com links
-        m = re.search(r"pic.twitter.com[^ \xa0]*", c)
-        if m is not None:
-            l = m.group(0)
-            c = c.replace(l, ' ')
-
-        # remove ellipsis
-        c = c.replace('\xa0…', ' ')
-
-        #c = c.replace('  ', '\n').replace('. ', '.\n')
-
-        # replace links to twitter by nitter ones
-        c = c.replace('/twitter.com/', '/nitter.net/')
-
-        # replace utm_? tracking
-        c = re.sub('\?utm.*$', '?utm_medium=Social&utm_source=Mastodon', c)
-
-        if tags:
-            c = c + '\n' + tags
-
-        try:
-            if len(toot_media)>0:
-                time.sleep(5)
-            toot = mastodon_api.status_post(c,
-                                        in_reply_to_id=in_reply_to,
-                                        media_ids=toot_media,
-                                        sensitive=False,
-                                        visibility='unlisted',
-                                        spoiler_text=None, language=lang)
-        except:
-            print("delay")
-            time.sleep(30)
-            toot = mastodon_api.status_post(c,
-                                            in_reply_to_id=in_reply_to,
-                                            media_ids=toot_media,
-                                            sensitive=False,
-                                            visibility='unlisted',
-                                            spoiler_text=None, language=lang)
-            pass
-
-        #break
-        if "id" in toot:
-            db.execute("INSERT INTO tweets VALUES ( ? , ? , ? , ? , ? )", (id+' '+t['conversation_id'], toot["id"], source, mastodon, instance))
-            sql.commit()
-            print(source, ": tweet created at",t['created_at'])
 
 print("---------------------------")
 print()
