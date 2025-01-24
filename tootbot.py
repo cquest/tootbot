@@ -44,6 +44,26 @@ def unredir(redir):
     return redir
 
 
+def post_video(url, maxgb=32):
+    # Download, recompress if needed and post a video
+    subprocess.run('rm -f out.*; yt-dlp -N 8 -o out.mp4 --recode-video mp4 --no-playlist --max-filesize 100M %s' %
+                (url,), shell=True, capture_output=False)
+    if os.path.getsize("out.mp4") > maxgb*1024*1024:
+        print('recompress/resize video')
+        subprocess.run('ffmpeg -i out.mp4 -filter:v scale=1280:-1 -c:v libx265 -c:a copy resized.mp4  && mv resized.mp4 out.mp4', shell=True, capture_output=False)
+    if os.path.getsize("out.mp4") > maxgb*1024*1024:
+        print('recompress/resize video')
+        subprocess.run('ffmpeg -i out.mp4 -filter:v scale=640:-1 -c:v libx265 -c:a copy resized.mp4  && mv resized.mp4 out.mp4', shell=True, capture_output=False)
+    if os.path.getsize("out.mp4") > maxgb*1024*1024:
+        print('recompress/resize video')
+        subprocess.run('ffmpeg -i out.mp4 -filter:v scale=480:-1 -c:v libx265 -b:a 96k resized.mp4  && mv resized.mp4 out.mp4', shell=True, capture_output=False)
+    with open("out.mp4", "rb") as file:
+        video_data = file.read()
+    media_posted = mastodon_api.media_post(video_data, mime_type='video/mp4')
+    time.sleep(5)
+    return media_posted
+
+
 if len(sys.argv) < 4:
     print("Usage: python3 tootbot.py twitter_account mastodon_login mastodon_passwd mastodon_instance [max_days [footer_tags [delay]]]")  # noqa
     sys.exit(1)
